@@ -1,0 +1,1 @@
+- 1 class (container), 1 method (marked with @AWSLambda annotation) per Lambda Function

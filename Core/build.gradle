@@ -1,0 +1,24 @@
+plugins {
+	id 'maven-publish'
+}
+
+dependencies {
+	// AWS
+	compile 'com.amazonaws:aws-lambda-java-core:+'
+	
+	
+	// Jackson
+			//compile 'com.fasterxml.jackson.jr:jackson-jr-objects:+'
+	compile 'com.fasterxml.jackson.core:jackson-databind:+'
+	compile 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:+'
+		
+	compile project(':Shared')
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}

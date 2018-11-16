@@ -1,0 +1,28 @@
+plugins {
+	id 'maven-publish'
+}
+
+dependencies {
+    // AWS
+	compile ('com.amazonaws:aws-java-sdk-s3:+') {
+		//exclude group: 'commons-logging'
+		exclude group: 'software.amazon.ion'
+		//exclude group: 'joda-time'
+		exclude group: 'com.fasterxml.jackson.core'
+		exclude group: 'com.fasterxml.jackson.dataformat'
+	}
+	
+	// Apache Commons
+	compile 'org.apache.commons:commons-compress:+'
+	compile 'org.apache.commons:commons-io:+'
+	compile 'org.apache.commons:commons-lang3:+'
+	compile 'org.apache.commons:commons-text:+'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
