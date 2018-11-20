@@ -218,51 +218,47 @@ public abstract class FunctionContainer<C extends FunctionConfig> {
 //			Pair.of("projectClass", projectClass.getSimpleName()),
 //			Pair.of("awsLambdaAnnotation.memory", awsLambdaAnnotation.memory()));
 
-		// Process input
-		if (input != null) {
-			// If the param is not explicitly specified - assuming that input contains JSON to be mapped into config
-			if (awsLambdaMethodParamClass == null) {
-				try (InputStream in = input) {
-					if (configurable) {
-						configString = IOUtils.toString(in);
-						config = OBJECT_MAPPER.readValue(configString, configClass);
-						JsonNode altConfig = OBJECT_MAPPER.readTree(configString);
-						
-						if (altConfig.hasNonNull("noOp"))
-							noOp = altConfig.get("noOp").asBoolean();
-						
-						if (altConfig.hasNonNull("refreshConfig"))
-							refreshConfig = altConfig.get("refreshConfig").asBoolean();
-					} else {
-						config = null;
-						JsonNode altConfig = OBJECT_MAPPER.readTree(in);
-						
-						if (altConfig.hasNonNull("noOp"))
-							noOp = altConfig.get("noOp").asBoolean();
-						
-						if (altConfig.hasNonNull("refreshConfig"))
-							noOp = altConfig.get("refreshConfig").asBoolean();
-					}
-						
-				} catch (IOException ex) {
-					throw new RuntimeException("Could not read payload InputStream to JSON", ex);
+		// If the param is not explicitly specified - assuming that input contains JSON to be mapped into config
+		if (input != null && awsLambdaMethodParamClass == null) {
+			try (InputStream in = input) {
+				if (configurable) {
+					configString = IOUtils.toString(in);
+					config = OBJECT_MAPPER.readValue(configString, configClass);
+					JsonNode altConfig = OBJECT_MAPPER.readTree(configString);
+
+					if (altConfig.hasNonNull("noOp"))
+						noOp = altConfig.get("noOp").asBoolean();
+
+					if (altConfig.hasNonNull("refreshConfig"))
+						refreshConfig = altConfig.get("refreshConfig").asBoolean();
+				} else {
+					config = null;
+					JsonNode altConfig = OBJECT_MAPPER.readTree(in);
+
+					if (altConfig.hasNonNull("noOp"))
+						noOp = altConfig.get("noOp").asBoolean();
+
+					if (altConfig.hasNonNull("refreshConfig"))
+						noOp = altConfig.get("refreshConfig").asBoolean();
 				}
-			} else if (InputStream.class.isAssignableFrom(awsLambdaMethodParamClass)) {
-				// Input is a raw InputStream to be consumed by the application
-			} else {
-				// Parse input as JSON to be passed to the function code ToDo!!! var!
-				try (InputStream in = input) {
-					OBJECT_MAPPER.readValue(in, awsLambdaMethodParamClass);
-				} catch (IOException ex) {
-					throw new RuntimeException(
-						String.format(
-							"Could not read payload InputStream as JSON coercing into %s",
-							awsLambdaMethodParamClass.getSimpleName()),
-						ex);
-				}
-				
+
+			} catch (IOException ex) {
+				throw new RuntimeException("Could not read payload InputStream to JSON", ex);
 			}
-		}
+		} //else if (InputStream.class.isAssignableFrom(awsLambdaMethodParamClass)) {
+				// Input is a raw InputStream to be consumed by the application
+			//}
+//			else {
+//				// Parse input as JSON to be passed to the function code ToDo!!! var!
+//				try (InputStream in = input) {
+//					OBJECT_MAPPER.readValue(in, awsLambdaMethodParamClass);
+//				} catch (IOException ex) {
+//					throw new RuntimeException(
+//						String.format(
+//							"Could not read payload InputStream as JSON coercing into %s",
+//							awsLambdaMethodParamClass.getSimpleName()),
+//						ex);
+//				}
 
 		if (configurable && getFunctionConfigStorageBucket() != null && (refreshConfig || !CACHED_CONFIG.containsKey(awsLambdaAlias))) {
 			// Try to load config
@@ -331,15 +327,17 @@ public abstract class FunctionContainer<C extends FunctionConfig> {
 		log.log("START", "Lambda Code");
 		
 		try {
+			Object invokeResult;
+			
 			if (awsLambdaMethodParamClass == null)
-				awsLambdaMethod.invoke(this);
+				invokeResult = awsLambdaMethod.invoke(this);
 			else if (InputStream.class.isAssignableFrom(awsLambdaMethodParamClass))
-				awsLambdaMethod.invoke(this, new Object[]{input});
+				invokeResult = awsLambdaMethod.invoke(this, new Object[]{input});
 			else
 				try (InputStream in = input) {
-					awsLambdaMethod
+					invokeResult = awsLambdaMethod
 						.invoke(this,
-							new Object[]{OBJECT_MAPPER.readValue(configString, awsLambdaMethodParamClass)});
+							new Object[]{OBJECT_MAPPER.readValue(in, awsLambdaMethodParamClass)});
 				} catch (IOException ex) {
 					throw new RuntimeException(
 						String.format(
@@ -347,6 +345,21 @@ public abstract class FunctionContainer<C extends FunctionConfig> {
 							awsLambdaMethodParamClass.getSimpleName()),
 						ex);
 				}
+			
+			// Lambda return value
+			if (invokeResult != null && output != null) {
+				// ToDo: figure out how to work a raw stream - probably 2nd param to invoke, or make stream accessible to function like config
+				//if (OutputStream.class.isAssignableFrom(output.getClass()))
+				try {
+					OBJECT_MAPPER.writeValue(output, invokeResult);
+				} catch (IOException ex) {
+					throw new RuntimeException(
+						String.format(
+							"Could not write output of the function to OutputStream as JSON converting from %s",
+							awsLambdaMethodReturnParamClass.getSimpleName()),
+						ex);
+				} 
+			}
 		} catch (IllegalAccessException ex) {
 			// Fatal - no access
 			if (context instanceof AWSLocalContext) {
