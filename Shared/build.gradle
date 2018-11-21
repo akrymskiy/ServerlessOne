@@ -1,6 +1,6 @@
-plugins {
-	id 'maven-publish'
-}
+//plugins {
+//	id 'maven-publish'
+//}
 
 dependencies {
     // AWS
@@ -19,10 +19,10 @@ dependencies {
 	compile 'org.apache.commons:commons-text:+'
 }
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
-}
+//publishing {
+//    publications {
+//        mavenJava(MavenPublication) {
+//            from components.java
+//        }
+//    }
+//}

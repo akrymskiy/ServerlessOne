@@ -17,4 +17,5 @@ gradlePlugin {
         }
     }
 }
+//https://plugins.gradle.org/docs/publish-plugin
 

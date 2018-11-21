@@ -3,10 +3,12 @@
 //
 
 apply plugin: 'java'
-apply plugin: 'maven'
+//apply plugin: 'maven'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
 
 String mavenGroupId = 'one.serverless'
-String mavenVersion = '1.0-SNAPSHOT'
+String mavenVersion = '1.0-SNAPSHOT' //
 
 sourceCompatibility = '1.8'
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
@@ -36,13 +38,13 @@ artifacts {
     archives sourcesJar
 }
 
-configure(install.repositories.mavenInstaller) {
-    pom.project {
-        groupId = mavenGroupId
-        artifactId = mavenArtifactId
-        version = mavenVersion
-    }
-}
+//configure(install.repositories.mavenInstaller) {
+//    pom.project {
+//        groupId = mavenGroupId
+//        artifactId = mavenArtifactId
+//        version = mavenVersion
+//    }
+//}
 
 task createFolders(description: 'Creates the source folders if they do not exist.') doLast {
     sourceSets*.allSource*.srcDirs*.each { File srcDir ->
@@ -67,4 +69,38 @@ compileJava {
 // Make systemProperties available for tests
 test {
     systemProperties = System.properties
+}
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+	
+    dependencies {
+        classpath 'com.amazonaws:aws-java-sdk-core:+'
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+			
+			artifact sourcesJar
+        }
+    }
+    repositories {
+		maven {
+			def releasesRepoUrl = "s3://serverless.one/repos/release"
+            def snapshotsRepoUrl = "s3://serverless.one/repos/snapshot"
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+
+			credentials(AwsCredentials) {
+				def defaultCredentials = new com.amazonaws.auth.profile.ProfileCredentialsProvider("maven").getCredentials()
+
+                accessKey defaultCredentials.getAWSAccessKeyId()
+                secretKey defaultCredentials.getAWSSecretKey()
+			}
+		}
+    }   
 }

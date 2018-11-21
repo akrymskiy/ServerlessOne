@@ -28,3 +28,9 @@ task publishToMavenLocal() {
 	dependsOn ':Core:publishToMavenLocal'
 	//dependsOn ':GradlePlugin:publishToMavenLocal'
 }
+
+task publishToS3() {
+    dependsOn ':Shared:publishMavenJavaPublicationToMavenRepository'
+	dependsOn ':Core:publishMavenJavaPublicationToMavenRepository'
+	//dependsOn ':GradlePlugin:publishToMavenLocal'
+}
